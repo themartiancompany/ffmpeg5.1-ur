@@ -1,5 +1,8 @@
+# SPDX-License-Identifier: AGPL-3.0
+#
 # Maintainer:  Marcell Meszaros < marcell.meszaros AT runbox.eu >
-# Contributor: Pellegrino Prevete <pellegrinoprevete@gmail.com>
+# Maintainer: Pellegrino Prevete <pellegrinoprevete@gmail.com>
+# Maintainer: Truocolo <truocolo@aol.com>
 # Contributor: Tomasz Maciej Nowak <com[dot]gmail[at]tmn505>
 # Contributor: gbr <gbr@protonmail.com>
 # Contributor: Maxime Gauduin <alucryd@archlinux.org>
@@ -13,14 +16,23 @@ pkgname="${_pkgname}5.1"
 pkgver=5.1.4
 pkgrel=1
 epoch=1
-pkgdesc='Complete solution to record, convert and stream audio and video (legacy v5.1 branch, with libavcodec v59)'
+_pkgdesc=(
+  'Complete solution to record, convert and stream'
+  'audio and video (legacy v5.1 branch, with libavcodec v59)')
+pkgdesc="${_pkgdesc[*]}"
 arch=(
   aarch64
   i686
   x86_64
+  arm
+  armv7h
+  armv6l
+  powerpc
+  pentium4
 )
 url="https://${_pkgname}.org"
-license=(GPL3)
+license=(
+  GPL3)
 depends=(
   alsa-lib
   aom
@@ -79,7 +91,8 @@ depends=(
   zimg
   zlib
 )
-depends_x86_64=(libmfx)
+depends_x86_64=(
+  libmfx)
 makedepends=(
   amf-headers
   avisynthplus
@@ -94,29 +107,52 @@ makedepends=(
 )
 optdepends=(
   'avisynthplus: AviSynthPlus support'
-  'ffmpeg: v6.x provides libswresample.so.4, omitted from this ffmpeg5.1 pkg'
+  "${_pkgname}: v6.x provides libswresample.so.4, omitted from this ${pkgname} pkg"
   'intel-media-sdk: Intel QuickSync support'
   'ladspa: LADSPA filters'
 )
 optdepends_x86_64=(
   'nvidia-utils: Nvidia NVDEC/NVENC support'
 )
-provides=(ffmpeg-compat-59)
-conflicts=(ffmpeg-compat-59)
-source=("git+https://git.${_pkgname}.org/${_pkgname}.git?signed#tag=n${pkgver}")
-b2sums=('SKIP')
-validpgpkeys=(DD1EC9E8DE085C629B3E1846B18E8928B3948D64) # Michael Niedermayer <michael@niedermayer.cc>
+provides=(
+  "${_pkgname}-compat-59"
+)
+conflicts=(
+  "${_pkgname}-compat-59"
+)
+_http="https://git.${_pkgname}.org"
+_url="${_http}/${_pkgname}"
+source=(
+  "git+${_url}.git?signed#tag=n${pkgver}"
+)
+b2sums=(
+  'SKIP')
+validpgpkeys=(
+  # Michael Niedermayer <michael@niedermayer.cc>
+  DD1EC9E8DE085C629B3E1846B18E8928B3948D64
+)
 
 prepare() {
-  cd "${_pkgname}"
-  echo "Applying patches for ffnvcodec SDK 12.1..."
-  git cherry-pick -n 03823ac0c6a38bd6ba972539e3203a592579792f
-  git cherry-pick -n d2b46c1ef768bc31ba9180f6d469d5b8be677500
+  cd \
+    "${_pkgname}"
+  echo \
+    "Applying patches for ffnvcodec SDK 12.1..."
+  git \
+    cherry-pick \
+     -n \
+       03823ac0c6a38bd6ba972539e3203a592579792f
+  git \
+    cherry-pick \
+      -n \
+        d2b46c1ef768bc31ba9180f6d469d5b8be677500
 }
 
 build() {
-  cd "${_pkgname}"
-  local _build_opts=(
+  cd \
+    "${_pkgname}"
+  local \
+    _build_opts=()
+  _build_opts=(
     --prefix=/usr
     --incdir="/usr/include/${pkgname}"
     --libdir="/usr/lib/${pkgname}"
@@ -131,7 +167,8 @@ build() {
     --disable-sndio
     --disable-static
     --disable-stripping
-    --disable-swresample    # ffmpeg 6.0 & 6.1 contains same major SO version 4
+    # ffmpeg 6.0 & 6.1 contains same major SO version 4
+    --disable-swresample
     --enable-alsa
     --enable-amf
     --enable-avisynth
@@ -195,8 +232,10 @@ build() {
     --enable-zlib
   )
 
-  [[ $CARCH == "armv7h" || $CARCH == "aarch64" ]] && \
-    _build_opts+=(--host-cflags="-fPIC")
+  [[ $CARCH == "armv7h" ]] || \
+  [[ $CARCH == "aarch64" ]] && \
+    _build_opts+=(
+      --host-cflags="-fPIC")
 
   [[ $CARCH == "x86_64" ]] && \
     _build_opts+=(
@@ -206,25 +245,43 @@ build() {
       --enable-nvenc
     )
 
-  ./configure "${_build_opts[@]}"
+  ./configure \
+    "${_build_opts[@]}"
   make
 }
 
 package() {
-  make DESTDIR="${pkgdir}" \
-       -C "${_pkgname}" install
-
-  cd "${pkgdir}"
-  echo "Moving libs to /usr/lib, except the .so symlinks..."
-  local file
-  for file in "usr/lib/${pkgname}/"*; do
-    if [[ "$file" == *.so ]]; then
-      ln -srfv -- usr/lib/"$(readlink "$file")" "$file"
-    elif [[ ! -d "$file" ]]; then
-      mv -v "$file" usr/lib
+  make \
+    DESTDIR="${pkgdir}" \
+    -C "${_pkgname}" \
+    install
+  cd \
+    "${pkgdir}"
+  echo \
+    "Moving libs to /usr/lib, except the .so symlinks..."
+  local \
+    _file
+  for _file in "usr/lib/${pkgname}/"*; do
+    if [[ "${_file}" == *.so ]]; then
+      ln \
+        -srfv -- \
+        usr/lib/"$( \
+          readlink \
+            "${_file}")" \
+        "${_file}"
+    elif [[ ! -d "${_file}" ]]; then
+      mv \
+        -v \
+        "${_file}" \
+        usr/lib
     fi
   done
 
-  echo "Removing unneeded docs / example files..."
-  rm -rv usr/share
+  echo \
+    "Removing unneeded docs / example files..."
+  rm \
+    -rv \
+    usr/share
 }
+
+# vim:set sw=2 sts=-1 et:
